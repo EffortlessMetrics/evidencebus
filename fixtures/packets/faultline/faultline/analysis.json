@@ -1,0 +1,8 @@
+{
+  "outcome": "suspect_window",
+  "lower_bound_exclusive": "mid123",
+  "upper_bound_inclusive": "bad456",
+  "reasons": [
+    "skipped_midpoint"
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "eb_version": "0.1.0",
+  "bundle_id": "3e287a2a1d147e9eb118d12bd1f01d36b19a3594a17d857bdddefbc751cec0e0",
+  "packets": [
+    {
+      "packet_id": "pkt-faultline",
+      "tool": "faultline",
+      "packet_path": "packets/pkt-faultline/packet.eb.json",
+      "sha256": "1090f0e8d22036d79e51fdd39b70e3024663bd9e589a2901f3aa8eff4488e609"
+    },
+    {
+      "packet_id": "pkt-perfgate",
+      "tool": "perfgate",
+      "packet_path": "packets/pkt-perfgate/packet.eb.json",
+      "sha256": "74f8a3178432abe767322288c3de37fa52e2c83b76b0185bd398d2d18c5e2496"
+    }
+  ],
+  "artifacts": [
+    {
+      "packet_id": "pkt-faultline",
+      "role": "native_payload",
+      "relative_path": "packets/pkt-faultline/artifacts/faultline/analysis.json",
+      "sha256": "6110b08f92ea421a2949be91fad6749df376d412838ac9fc9535a0bd3b03edd6",
+      "size_bytes": 151
+    },
+    {
+      "packet_id": "pkt-faultline",
+      "role": "report_html",
+      "relative_path": "packets/pkt-faultline/artifacts/faultline/index.html",
+      "sha256": "36da7989b4299b3d9d797cfd7cc848be1229cae05747379ad7d76fb4da2af5e2",
+      "size_bytes": 208
+    },
+    {
+      "packet_id": "pkt-faultline",
+      "role": "stderr_log",
+      "relative_path": "packets/pkt-faultline/artifacts/logs/stderr.log",
+      "sha256": "7b4279d1e15ad80560b0e955d5f0bc4a720246dfe2d8c1096f849464d46de601",
+      "size_bytes": 22
+    },
+    {
+      "packet_id": "pkt-perfgate",
+      "role": "report_json",
+      "relative_path": "packets/pkt-perfgate/artifacts/report.json",
+      "sha256": "44836ba78a02cfa65aa7abe63cc876dd8af0e4d0ff5dd63b799f9ffdd4b06c51",
+      "size_bytes": 51
+    }
+  ],
+  "summary": {
+    "packet_count": 2,
+    "pass_count": 1,
+    "fail_count": 0,
+    "warn_count": 0,
+    "indeterminate_count": 1,
+    "error_count": 0
+  }
+}

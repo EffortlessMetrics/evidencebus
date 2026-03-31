@@ -1,0 +1,20 @@
+[package]
+name = "evidencebus-export"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+evidencebus-codes = { path = "../evidencebus-codes" }
+evidencebus-types = { path = "../evidencebus-types" }
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+evidencebus-core = { path = "../evidencebus-core" }
+evidencebus-fixtures = { path = "../evidencebus-fixtures" }
+
+[lints]
+workspace = true

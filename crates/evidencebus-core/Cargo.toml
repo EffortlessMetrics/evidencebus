@@ -1,0 +1,21 @@
+[package]
+name = "evidencebus-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+evidencebus-codes = { path = "../evidencebus-codes" }
+evidencebus-types = { path = "../evidencebus-types" }
+hex.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+evidencebus-fixtures = { path = "../evidencebus-fixtures" }
+
+[lints]
+workspace = true

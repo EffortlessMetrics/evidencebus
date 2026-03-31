@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://effortlessmetrics.dev/schemas/evidencebus/bundle.schema.json",
+  "title": "EvidenceBus Bundle Manifest",
+  "type": "object",
+  "required": [
+    "eb_version",
+    "bundle_id",
+    "packets",
+    "artifacts",
+    "summary"
+  ],
+  "properties": {
+    "eb_version": {
+      "type": "string"
+    },
+    "bundle_id": {
+      "type": "string"
+    },
+    "packets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "packet_id",
+          "tool",
+          "packet_path",
+          "sha256"
+        ],
+        "properties": {
+          "packet_id": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          },
+          "packet_path": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "packet_id",
+          "role",
+          "relative_path",
+          "sha256"
+        ],
+        "properties": {
+          "packet_id": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "relative_path": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "packet_count",
+        "pass_count",
+        "fail_count",
+        "warn_count",
+        "indeterminate_count",
+        "error_count"
+      ],
+      "properties": {
+        "packet_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pass_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fail_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warn_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "indeterminate_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "error_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

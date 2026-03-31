@@ -1,0 +1,82 @@
+{
+  "eb_version": "0.1.0",
+  "packet_id": "pkt-faultline",
+  "producer": {
+    "tool": "faultline",
+    "version": "0.1.0",
+    "invocation_id": "run-faultline-001"
+  },
+  "subject": {
+    "vcs": "git",
+    "repo": "EffortlessMetrics/example",
+    "base": "good123",
+    "head": "bad456",
+    "paths": [
+      "crates/parser/src/lib.rs",
+      "crates/parser/tests/regression.rs"
+    ],
+    "workspace_scope": [
+      "parser"
+    ]
+  },
+  "summary": {
+    "status": "indeterminate",
+    "title": "Suspect window narrowed",
+    "summary": "Skipped midpoint prevented exact first-bad localization."
+  },
+  "projections": {
+    "assertions": [
+      {
+        "id": "faultline.localization",
+        "status": "indeterminate",
+        "title": "Localization outcome",
+        "summary": "A suspect window of three commits remains."
+      }
+    ],
+    "findings": [
+      {
+        "id": "faultline.suspect_window",
+        "severity": "warning",
+        "title": "Suspect window remains",
+        "summary": "Read parser changes and workflow changes first.",
+        "location": "crates/parser/src/lib.rs"
+      }
+    ],
+    "metrics": [
+      {
+        "name": "suspect_window_commits",
+        "value": 3,
+        "unit": "count"
+      }
+    ],
+    "relations": [],
+    "attachments": [
+      {
+        "role": "native_payload",
+        "media_type": "application/json",
+        "relative_path": "faultline/analysis.json",
+        "schema_id": "faultline.analysis@0.1"
+      },
+      {
+        "role": "report_html",
+        "media_type": "text/html",
+        "relative_path": "faultline/index.html"
+      },
+      {
+        "role": "stderr_log",
+        "media_type": "text/plain",
+        "relative_path": "logs/stderr.log"
+      }
+    ]
+  },
+  "provenance": {
+    "command": "faultline --good good123 --bad bad456 --cmd 'cargo test parser_regression'",
+    "environment_fingerprint": "linux-x86_64",
+    "platform": {
+      "os": "linux",
+      "arch": "x86_64",
+      "hostname": "ci-runner-1"
+    }
+  },
+  "labels": {}
+}

@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://effortlessmetrics.dev/schemas/evidencebus/packet.schema.json",
+  "title": "EvidenceBus Packet",
+  "type": "object",
+  "required": [
+    "eb_version",
+    "packet_id",
+    "producer",
+    "subject",
+    "summary",
+    "projections",
+    "provenance"
+  ],
+  "properties": {
+    "eb_version": {
+      "type": "string"
+    },
+    "packet_id": {
+      "type": "string"
+    },
+    "producer": {
+      "type": "object",
+      "required": [
+        "tool",
+        "version"
+      ],
+      "properties": {
+        "tool": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "invocation_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "required": [
+        "vcs"
+      ],
+      "properties": {
+        "vcs": {
+          "type": "string",
+          "enum": [
+            "git",
+            "other"
+          ]
+        },
+        "repo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "base": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "head": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "workspace_scope": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "status",
+        "title",
+        "summary"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "warn",
+            "indeterminate",
+            "error"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        }
+      }
+    },
+    "projections": {
+      "type": "object"
+    },
+    "provenance": {
+      "type": "object"
+    },
+    "labels": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}

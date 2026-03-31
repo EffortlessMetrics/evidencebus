@@ -1,0 +1,23 @@
+[package]
+name = "evidencebus-fs"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+evidencebus-codes = { path = "../evidencebus-codes" }
+evidencebus-core = { path = "../evidencebus-core" }
+evidencebus-types = { path = "../evidencebus-types" }
+serde_json.workspace = true
+tempfile.workspace = true
+thiserror.workspace = true
+walkdir.workspace = true
+
+[dev-dependencies]
+evidencebus-fixtures = { path = "../evidencebus-fixtures" }
+tempfile.workspace = true
+
+[lints]
+workspace = true

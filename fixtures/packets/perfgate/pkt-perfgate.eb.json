@@ -1,0 +1,63 @@
+{
+  "eb_version": "0.1.0",
+  "packet_id": "pkt-perfgate",
+  "producer": {
+    "tool": "perfgate",
+    "version": "0.7.0",
+    "invocation_id": "run-perfgate-001"
+  },
+  "subject": {
+    "vcs": "git",
+    "repo": "EffortlessMetrics/example",
+    "base": "abc123",
+    "head": "def456",
+    "paths": [
+      "crates/example/src/lib.rs"
+    ],
+    "workspace_scope": [
+      "example"
+    ]
+  },
+  "summary": {
+    "status": "pass",
+    "title": "Coverage gate passed",
+    "summary": "Changed modules maintained coverage above the configured floor."
+  },
+  "projections": {
+    "assertions": [
+      {
+        "id": "perfgate.coverage_floor",
+        "status": "pass",
+        "title": "Coverage floor",
+        "summary": "Coverage floor met for changed files."
+      }
+    ],
+    "findings": [],
+    "metrics": [
+      {
+        "name": "coverage_percent",
+        "value": 91.2,
+        "unit": "percent",
+        "baseline": 90.0
+      }
+    ],
+    "relations": [],
+    "attachments": [
+      {
+        "role": "report_json",
+        "media_type": "application/json",
+        "relative_path": "report.json"
+      }
+    ]
+  },
+  "provenance": {
+    "command": "perfgate --base abc123 --head def456",
+    "environment_fingerprint": "linux-x86_64",
+    "platform": {
+      "os": "linux",
+      "arch": "x86_64",
+      "hostname": "ci-runner-1"
+    }
+  },
+  "labels": {}
+}
