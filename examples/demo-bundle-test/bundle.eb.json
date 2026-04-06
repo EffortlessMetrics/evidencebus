@@ -40,12 +40,12 @@
   "integrity": {
     "manifest_digest": "563377b47420b9a9ac187533a08e39f01b00fad5875566bd810a5963795db4de",
     "packet_digests": {
-      "pkt-faultline": "d4de9ae2f60e081c8ede8acf834d781e666379f554b0b61b2aa57dfa9420e271",
-      "pkt-perfgate": "b756e43901667990d11c4c904f07c2a8536ffbca803b8c6dd1c3595854e43938"
+      "pkt-perfgate": "b756e43901667990d11c4c904f07c2a8536ffbca803b8c6dd1c3595854e43938",
+      "pkt-faultline": "d4de9ae2f60e081c8ede8acf834d781e666379f554b0b61b2aa57dfa9420e271"
     },
     "artifact_digests": {
-      "packets/pkt-faultline/artifacts/logs/stderr.log": "7b4279d1e15ad80560b0e955d5f0bc4a720246dfe2d8c1096f849464d46de601",
       "packets/pkt-faultline/artifacts/faultline/index.html": "36da7989b4299b3d9d797cfd7cc848be1229cae05747379ad7d76fb4da2af5e2",
+      "packets/pkt-faultline/artifacts/logs/stderr.log": "7b4279d1e15ad80560b0e955d5f0bc4a720246dfe2d8c1096f849464d46de601",
       "packets/pkt-perfgate/artifacts/report.json": "44836ba78a02cfa65aa7abe63cc876dd8af0e4d0ff5dd63b799f9ffdd4b06c51",
       "packets/pkt-faultline/artifacts/faultline/analysis.json": "6110b08f92ea421a2949be91fad6749df376d412838ac9fc9535a0bd3b03edd6"
     }

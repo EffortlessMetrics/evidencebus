@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://effortlessmetrics.dev/schemas/evidencebus/bundle.schema.json",
-  "title": "EvidenceBus Bundle Manifest",
+  "title": "EvidenceBus Bundle",
   "type": "object",
   "required": [
     "eb_version",
     "bundle_id",
-    "packets",
-    "artifacts",
+    "created_at",
+    "manifest",
     "summary"
   ],
   "properties": {
@@ -17,61 +17,96 @@
     "bundle_id": {
       "type": "string"
     },
-    "packets": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": [
-          "packet_id",
-          "tool",
-          "packet_path",
-          "sha256"
-        ],
-        "properties": {
-          "packet_id": {
-            "type": "string"
-          },
-          "tool": {
-            "type": "string"
-          },
-          "packet_path": {
-            "type": "string"
-          },
-          "sha256": {
-            "type": "string"
-          }
-        }
-      }
+    "created_at": {
+      "type": "string"
     },
-    "artifacts": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": [
-          "packet_id",
-          "role",
-          "relative_path",
-          "sha256"
-        ],
-        "properties": {
-          "packet_id": {
-            "type": "string"
-          },
-          "role": {
-            "type": "string"
-          },
-          "relative_path": {
-            "type": "string"
-          },
-          "sha256": {
-            "type": "string"
-          },
-          "size_bytes": {
-            "type": [
-              "integer",
-              "null"
+    "manifest": {
+      "type": "object",
+      "required": [
+        "packets",
+        "artifacts",
+        "integrity"
+      ],
+      "properties": {
+        "packets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "packet_id",
+              "relative_path",
+              "sha256"
             ],
-            "minimum": 0
+            "properties": {
+              "packet_id": {
+                "type": "string"
+              },
+              "relative_path": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "packet_id",
+              "relative_path",
+              "role",
+              "sha256"
+            ],
+            "properties": {
+              "packet_id": {
+                "type": "string"
+              },
+              "relative_path": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "native_payload",
+                  "report_html",
+                  "stdout_log",
+                  "stderr_log",
+                  "plain_text",
+                  "arbitrary_binary"
+                ]
+              },
+              "sha256": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "integrity": {
+          "type": "object",
+          "required": [
+            "manifest_digest",
+            "packet_digests",
+            "artifact_digests"
+          ],
+          "properties": {
+            "manifest_digest": {
+              "type": "string"
+            },
+            "packet_digests": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "artifact_digests": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
           }
         }
       }
@@ -79,37 +114,73 @@
     "summary": {
       "type": "object",
       "required": [
-        "packet_count",
-        "pass_count",
-        "fail_count",
-        "warn_count",
-        "indeterminate_count",
-        "error_count"
+        "total_packets",
+        "total_artifacts",
+        "status_counts",
+        "severity_counts"
       ],
       "properties": {
-        "packet_count": {
+        "total_packets": {
           "type": "integer",
           "minimum": 0
         },
-        "pass_count": {
+        "total_artifacts": {
           "type": "integer",
           "minimum": 0
         },
-        "fail_count": {
-          "type": "integer",
-          "minimum": 0
+        "status_counts": {
+          "type": "object",
+          "required": [
+            "pass",
+            "fail",
+            "warn",
+            "indeterminate",
+            "error"
+          ],
+          "properties": {
+            "pass": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "fail": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "warn": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "indeterminate": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "error": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
         },
-        "warn_count": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "indeterminate_count": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "error_count": {
-          "type": "integer",
-          "minimum": 0
+        "severity_counts": {
+          "type": "object",
+          "required": [
+            "note",
+            "warning",
+            "error"
+          ],
+          "properties": {
+            "note": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "warning": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "error": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
         }
       }
     }

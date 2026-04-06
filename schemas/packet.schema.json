@@ -10,7 +10,7 @@
     "subject",
     "summary",
     "projections",
-    "provenance"
+    "created_at"
   ],
   "properties": {
     "eb_version": {
@@ -22,14 +22,14 @@
     "producer": {
       "type": "object",
       "required": [
-        "tool",
-        "version"
+        "tool_name",
+        "tool_version"
       ],
       "properties": {
-        "tool": {
+        "tool_name": {
           "type": "string"
         },
-        "version": {
+        "tool_version": {
           "type": "string"
         },
         "invocation_id": {
@@ -43,21 +43,24 @@
     "subject": {
       "type": "object",
       "required": [
-        "vcs"
+        "vcs_kind",
+        "repo_identifier",
+        "commit",
+        "head"
       ],
       "properties": {
-        "vcs": {
+        "vcs_kind": {
           "type": "string",
           "enum": [
             "git",
             "other"
           ]
         },
-        "repo": {
-          "type": [
-            "string",
-            "null"
-          ]
+        "repo_identifier": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string"
         },
         "base": {
           "type": [
@@ -66,22 +69,19 @@
           ]
         },
         "head": {
+          "type": "string"
+        },
+        "path_scope": {
           "type": [
             "string",
             "null"
           ]
         },
-        "paths": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
         "workspace_scope": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     },
@@ -90,7 +90,7 @@
       "required": [
         "status",
         "title",
-        "summary"
+        "short_summary"
       ],
       "properties": {
         "status": {
@@ -106,22 +106,296 @@
         "title": {
           "type": "string"
         },
-        "summary": {
+        "short_summary": {
           "type": "string"
         }
       }
     },
     "projections": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "assertions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "status",
+              "summary"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pass",
+                  "fail",
+                  "warn",
+                  "indeterminate",
+                  "error"
+                ]
+              },
+              "summary": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "title",
+                  "short_summary"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pass",
+                      "fail",
+                      "warn",
+                      "indeterminate",
+                      "error"
+                    ]
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "short_summary": {
+                    "type": "string"
+                  }
+                }
+              },
+              "details": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "severity",
+              "title",
+              "message"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "note",
+                  "warning",
+                  "error"
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "location": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "line": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "column": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "value"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "value": {
+                "type": "number"
+              },
+              "unit": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "baseline": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "relations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "kind",
+              "target_packet_id"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "derived_from",
+                  "supports",
+                  "supersedes"
+                ]
+              },
+              "target_packet_id": {
+                "type": "string"
+              },
+              "details": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "role",
+              "media_type",
+              "relative_path",
+              "sha256"
+            ],
+            "properties": {
+              "role": {
+                "type": "string",
+                "enum": [
+                  "native_payload",
+                  "report_html",
+                  "stdout_log",
+                  "stderr_log",
+                  "plain_text",
+                  "arbitrary_binary"
+                ]
+              },
+              "media_type": {
+                "type": "string"
+              },
+              "relative_path": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string"
+              },
+              "size": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "schema_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
     },
     "provenance": {
-      "type": "object"
-    },
-    "labels": {
       "type": "object",
+      "properties": {
+        "command": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "environment_fingerprint": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "platform_info": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "os": {
+              "type": "string"
+            },
+            "arch": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "native_payloads": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "links": {
+      "type": [
+        "object",
+        "null"
+      ],
       "additionalProperties": {
         "type": "string"
       }
+    },
+    "labels": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "created_at": {
+      "type": "string"
     }
   }
 }

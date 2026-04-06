@@ -11,12 +11,20 @@ name = "evidencebus"
 path = "src/main.rs"
 
 [dependencies]
+chrono.workspace = true
 clap.workspace = true
 evidencebus-codes = { path = "../evidencebus-codes" }
 evidencebus-export = { path = "../evidencebus-export" }
 evidencebus-fs = { path = "../evidencebus-fs" }
+evidencebus-types = { path = "../evidencebus-types" }
+miette.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+termcolor.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true

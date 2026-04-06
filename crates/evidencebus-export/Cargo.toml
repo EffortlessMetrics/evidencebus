@@ -8,6 +8,8 @@ repository.workspace = true
 
 [dependencies]
 evidencebus-codes = { path = "../evidencebus-codes" }
+evidencebus-export-markdown = { path = "../evidencebus-export-markdown" }
+evidencebus-export-sarif = { path = "../evidencebus-export-sarif" }
 evidencebus-types = { path = "../evidencebus-types" }
 serde_json.workspace = true
 thiserror.workspace = true

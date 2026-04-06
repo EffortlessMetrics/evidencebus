@@ -2,35 +2,34 @@
   "eb_version": "0.1.0",
   "packet_id": "pkt-faultline",
   "producer": {
-    "tool": "faultline",
-    "version": "0.1.0",
+    "tool_name": "faultline",
+    "tool_version": "0.1.0",
     "invocation_id": "run-faultline-001"
   },
   "subject": {
-    "vcs": "git",
-    "repo": "EffortlessMetrics/example",
+    "vcs_kind": "git",
+    "repo_identifier": "EffortlessMetrics/example",
+    "commit": "bad456",
     "base": "good123",
     "head": "bad456",
-    "paths": [
-      "crates/parser/src/lib.rs",
-      "crates/parser/tests/regression.rs"
-    ],
-    "workspace_scope": [
-      "parser"
-    ]
+    "path_scope": "crates/parser/src/lib.rs\ncrates/parser/tests/regression.rs",
+    "workspace_scope": "parser"
   },
   "summary": {
     "status": "indeterminate",
     "title": "Suspect window narrowed",
-    "summary": "Skipped midpoint prevented exact first-bad localization."
+    "short_summary": "Skipped midpoint prevented exact first-bad localization."
   },
   "projections": {
     "assertions": [
       {
         "id": "faultline.localization",
         "status": "indeterminate",
-        "title": "Localization outcome",
-        "summary": "A suspect window of three commits remains."
+        "summary": {
+          "status": "indeterminate",
+          "title": "Localization outcome",
+          "short_summary": "A suspect window of three commits remains."
+        }
       }
     ],
     "findings": [
@@ -38,8 +37,10 @@
         "id": "faultline.suspect_window",
         "severity": "warning",
         "title": "Suspect window remains",
-        "summary": "Read parser changes and workflow changes first.",
-        "location": "crates/parser/src/lib.rs"
+        "message": "Read parser changes and workflow changes first.",
+        "location": {
+          "path": "crates/parser/src/lib.rs"
+        }
       }
     ],
     "metrics": [
@@ -55,28 +56,43 @@
         "role": "native_payload",
         "media_type": "application/json",
         "relative_path": "faultline/analysis.json",
+        "sha256": "6110b08f92ea421a2949be91fad6749df376d412838ac9fc9535a0bd3b03edd6",
+        "size": 151,
         "schema_id": "faultline.analysis@0.1"
       },
       {
         "role": "report_html",
         "media_type": "text/html",
-        "relative_path": "faultline/index.html"
+        "relative_path": "faultline/index.html",
+        "sha256": "36da7989b4299b3d9d797cfd7cc848be1229cae05747379ad7d76fb4da2af5e2",
+        "size": 208
       },
       {
         "role": "stderr_log",
         "media_type": "text/plain",
-        "relative_path": "logs/stderr.log"
+        "relative_path": "logs/stderr.log",
+        "sha256": "7b4279d1e15ad80560b0e955d5f0bc4a720246dfe2d8c1096f849464d46de601",
+        "size": 22
       }
     ]
   },
+  "native_payloads": [
+    "faultline/analysis.json"
+  ],
+  "artifacts": [
+    "faultline/index.html",
+    "logs/stderr.log"
+  ],
   "provenance": {
     "command": "faultline --good good123 --bad bad456 --cmd 'cargo test parser_regression'",
     "environment_fingerprint": "linux-x86_64",
-    "platform": {
+    "platform_info": {
       "os": "linux",
-      "arch": "x86_64",
-      "hostname": "ci-runner-1"
+      "arch": "x86_64"
     }
   },
-  "labels": {}
+  "labels": {
+    "category": "localization"
+  },
+  "created_at": "2024-01-15T10:30:00Z"
 }

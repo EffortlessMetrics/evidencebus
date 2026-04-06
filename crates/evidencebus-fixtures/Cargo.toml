@@ -10,6 +10,7 @@ repository.workspace = true
 evidencebus-codes = { path = "../evidencebus-codes" }
 evidencebus-types = { path = "../evidencebus-types" }
 serde_json.workspace = true
+thiserror.workspace = true
 
 [lints]
 workspace = true

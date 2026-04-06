@@ -1,340 +1,299 @@
-use std::collections::HashSet;
-use std::path::{Component, Path};
+//! Core bundle construction and semantics for evidencebus.
+//!
+//! This crate provides pure functions for building bundles, manifests, and summaries,
+//! as well as deduplicating packets and detecting conflicts.
 
-use evidencebus_codes::{Status, ValidationCode, ValidationMode, EVIDENCEBUS_VERSION};
+use evidencebus_canonicalization::{canonicalize_json, CanonicalizationError};
+use evidencebus_digest::compute_sha256;
 use evidencebus_types::{
-    AttachmentRef, BundleManifest, BundleSummary, Packet, ValidationReport,
+    Artifact, ArtifactInventoryEntry, BundleManifest, BundleSummary, Conflict, Digest, DigestError,
+    IntegrityMetadata, Packet, PacketId, PacketInventoryEntry, SeverityCounts, StatusCounts,
 };
-use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 use thiserror::Error;
 
+/// Error type for core operations.
 #[derive(Debug, Error)]
 pub enum CoreError {
-    #[error("json serialization failed: {0}")]
-    Serialize(#[from] serde_json::Error),
+    #[error("conflict detected: {0}")]
+    Conflict(String),
+    #[error("canonicalization failed: {0}")]
+    Canonicalization(#[from] CanonicalizationError),
+    #[error("invalid digest: {0}")]
+    InvalidDigest(#[from] DigestError),
+    #[error("JSON serialization failed: {0}")]
+    Serialization(#[from] serde_json::Error),
 }
 
-pub fn validate_packet(packet: &Packet, _mode: ValidationMode) -> ValidationReport {
-    let mut report = ValidationReport::default();
+/// Legacy alias for backwards compatibility.
+pub type DedupeError = CoreError;
 
-    if packet.eb_version != EVIDENCEBUS_VERSION {
-        report.push_error(
-            ValidationCode::InvalidSchemaVersion,
-            format!(
-                "expected eb_version {}, found {}",
-                EVIDENCEBUS_VERSION, packet.eb_version
-            ),
-            Some("eb_version".to_string()),
-        );
-    }
-
-    if packet.packet_id.trim().is_empty() {
-        report.push_error(
-            ValidationCode::MissingField,
-            "packet_id must not be empty",
-            Some("packet_id".to_string()),
-        );
-    }
-
-    if packet.producer.tool.trim().is_empty() {
-        report.push_error(
-            ValidationCode::MissingField,
-            "producer.tool must not be empty",
-            Some("producer.tool".to_string()),
-        );
-    }
-
-    if packet.producer.version.trim().is_empty() {
-        report.push_error(
-            ValidationCode::MissingField,
-            "producer.version must not be empty",
-            Some("producer.version".to_string()),
-        );
-    }
-
-    if packet.summary.title.trim().is_empty() {
-        report.push_error(
-            ValidationCode::MissingField,
-            "summary.title must not be empty",
-            Some("summary.title".to_string()),
-        );
-    }
-
-    if packet.summary.summary.trim().is_empty() {
-        report.push_error(
-            ValidationCode::MissingField,
-            "summary.summary must not be empty",
-            Some("summary.summary".to_string()),
-        );
-    }
-
-    let mut seen_paths = HashSet::new();
-    for attachment in &packet.projections.attachments {
-        validate_attachment(attachment, &mut report);
-        if !seen_paths.insert(attachment.relative_path.clone()) {
-            report.push_error(
-                ValidationCode::DuplicateAttachmentPath,
-                format!("duplicate attachment path {}", attachment.relative_path),
-                Some(format!("projections.attachments[{}]", attachment.relative_path)),
-            );
-        }
-    }
-
-    report
-}
-
-fn validate_attachment(attachment: &AttachmentRef, report: &mut ValidationReport) {
-    if attachment.role.trim().is_empty() {
-        report.push_error(
-            ValidationCode::MissingField,
-            "attachment role must not be empty",
-            Some(format!("attachment:{}", attachment.relative_path)),
-        );
-    }
-
-    if attachment.media_type.trim().is_empty() {
-        report.push_error(
-            ValidationCode::MissingField,
-            "attachment media_type must not be empty",
-            Some(format!("attachment:{}", attachment.relative_path)),
-        );
-    }
-
-    if !is_safe_relative_path(&attachment.relative_path) {
-        report.push_error(
-            ValidationCode::UnsafePath,
-            format!("attachment path is unsafe: {}", attachment.relative_path),
-            Some(format!("attachment:{}", attachment.relative_path)),
-        );
-    }
-
-    if attachment.role == "native_payload" && attachment.schema_id.is_none() {
-        report.push_error(
-            ValidationCode::MissingNativePayloadSchema,
-            "native_payload attachments require schema_id",
-            Some(format!("attachment:{}", attachment.relative_path)),
-        );
-    }
-
-    if let Some(digest) = &attachment.sha256 {
-        if !is_sha256_hex(digest) {
-            report.push_error(
-                ValidationCode::InvalidDigest,
-                format!("invalid sha256 digest: {}", digest),
-                Some(format!("attachment:{}", attachment.relative_path)),
-            );
-        }
-    }
-}
-
-pub fn validate_bundle_manifest(bundle: &BundleManifest) -> ValidationReport {
-    let mut report = ValidationReport::default();
-
-    if bundle.eb_version != EVIDENCEBUS_VERSION {
-        report.push_error(
-            ValidationCode::InvalidSchemaVersion,
-            format!(
-                "expected eb_version {}, found {}",
-                EVIDENCEBUS_VERSION, bundle.eb_version
-            ),
-            Some("eb_version".to_string()),
-        );
-    }
-
-    if bundle.bundle_id.trim().is_empty() {
-        report.push_error(
-            ValidationCode::MissingField,
-            "bundle_id must not be empty",
-            Some("bundle_id".to_string()),
-        );
-    }
-
-    let mut packet_ids = HashSet::new();
-    for entry in &bundle.packets {
-        if !packet_ids.insert(entry.packet_id.clone()) {
-            report.push_error(
-                ValidationCode::DuplicatePacketId,
-                format!("duplicate packet id {}", entry.packet_id),
-                Some(entry.packet_path.clone()),
-            );
-        }
-
-        if !is_safe_relative_path(&entry.packet_path) {
-            report.push_error(
-                ValidationCode::UnsafePath,
-                format!("unsafe packet path {}", entry.packet_path),
-                Some(entry.packet_path.clone()),
-            );
-        }
-
-        if !is_sha256_hex(&entry.sha256) {
-            report.push_error(
-                ValidationCode::InvalidDigest,
-                format!("invalid packet digest {}", entry.sha256),
-                Some(entry.packet_path.clone()),
-            );
-        }
-    }
-
-    let mut artifact_paths = HashSet::new();
-    for artifact in &bundle.artifacts {
-        if !artifact_paths.insert(artifact.relative_path.clone()) {
-            report.push_error(
-                ValidationCode::DuplicateAttachmentPath,
-                format!("duplicate bundle artifact path {}", artifact.relative_path),
-                Some(artifact.relative_path.clone()),
-            );
-        }
-
-        if !is_safe_relative_path(&artifact.relative_path) {
-            report.push_error(
-                ValidationCode::UnsafePath,
-                format!("unsafe bundle artifact path {}", artifact.relative_path),
-                Some(artifact.relative_path.clone()),
-            );
-        }
-
-        if !is_sha256_hex(&artifact.sha256) {
-            report.push_error(
-                ValidationCode::InvalidDigest,
-                format!("invalid artifact digest {}", artifact.sha256),
-                Some(artifact.relative_path.clone()),
-            );
-        }
-    }
-
-    report
-}
-
-pub fn canonical_packet_bytes(packet: &Packet) -> Result<Vec<u8>, CoreError> {
-    let canonical = packet.canonicalized();
-    serde_json::to_vec_pretty(&canonical).map_err(CoreError::from)
-}
-
-pub fn digest_packet(packet: &Packet) -> Result<String, CoreError> {
-    let bytes = canonical_packet_bytes(packet)?;
-    Ok(digest_bytes(&bytes))
-}
-
-pub fn digest_bytes(bytes: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(bytes);
-    hex::encode(hasher.finalize())
-}
-
-pub fn summarize_packets(packets: &[Packet]) -> BundleSummary {
-    let mut summary = BundleSummary::default();
-    summary.packet_count = packets.len();
+/// Deduplicates packets by digest, keeping the first occurrence.
+///
+/// # Errors
+/// Returns a `DedupeError` if conflicts are detected.
+pub fn dedupe_packets(packets: Vec<Packet>) -> Result<Vec<Packet>, CoreError> {
+    let mut seen = HashMap::new();
+    let mut result = Vec::new();
 
     for packet in packets {
-        match packet.summary.status {
-            Status::Pass => summary.pass_count += 1,
-            Status::Fail => summary.fail_count += 1,
-            Status::Warn => summary.warn_count += 1,
-            Status::Indeterminate => summary.indeterminate_count += 1,
-            Status::Error => summary.error_count += 1,
+        let json = canonicalize_json(&packet)?;
+        let digest = Digest::new(compute_sha256(json.as_bytes()))?;
+
+        if let Some(existing_id) = seen.get(&digest) {
+            if existing_id != &packet.packet_id {
+                return Err(CoreError::Conflict(format!(
+                    "different packets with same digest: {} and {}",
+                    existing_id, packet.packet_id
+                )));
+            }
+            // Duplicate packet with same ID, skip
+        } else {
+            seen.insert(digest, packet.packet_id.clone());
+            result.push(packet);
         }
     }
 
-    summary
+    Ok(result)
 }
 
-pub fn stable_bundle_id(packet_digests: &[(String, String)]) -> String {
-    let mut joined = String::new();
-    for (packet_id, digest) in packet_digests {
-        joined.push_str(packet_id);
-        joined.push(':');
-        joined.push_str(digest);
-        joined.push('\n');
+/// Detects conflicts between packets (same ID, different content).
+pub fn detect_conflicts(packets: &[Packet]) -> Vec<Conflict> {
+    let mut seen: HashMap<PacketId, Digest> = HashMap::new();
+    let mut conflicts = Vec::new();
+
+    for packet in packets {
+        let json = match canonicalize_json(&packet) {
+            Ok(j) => j,
+            Err(_) => continue, // Skip packets that can't be canonicalized
+        };
+        let digest = match Digest::new(compute_sha256(json.as_bytes())) {
+            Ok(d) => d,
+            Err(_) => continue, // Skip packets with invalid digests
+        };
+
+        if let Some(existing_digest) = seen.get(&packet.packet_id) {
+            if existing_digest != &digest {
+                conflicts.push(Conflict::new(
+                    packet.packet_id.clone(),
+                    existing_digest.clone(),
+                    digest,
+                ));
+            }
+        } else {
+            seen.insert(packet.packet_id.clone(), digest);
+        }
     }
-    digest_bytes(joined.as_bytes())
+
+    conflicts
 }
 
-pub fn is_safe_relative_path(path: &str) -> bool {
-    if path.trim().is_empty() {
-        return false;
+/// Builds a bundle manifest from packets and artifacts.
+///
+/// # Errors
+/// Returns a `CoreError` if canonicalization, digest computation, or serialization fails.
+pub fn build_bundle_manifest(
+    packets: &[Packet],
+    artifacts: &[Artifact],
+) -> Result<BundleManifest, CoreError> {
+    let mut packet_entries = Vec::new();
+    let mut artifact_entries = Vec::new();
+    let mut packet_digests = HashMap::new();
+    let mut artifact_digests = HashMap::new();
+
+    // Process packets
+    for packet in packets {
+        let json = canonicalize_json(packet)?;
+        let digest = Digest::new(compute_sha256(json.as_bytes()))?;
+
+        let entry = PacketInventoryEntry::new(
+            packet.packet_id.clone(),
+            format!("packets/{}/packet.eb.json", packet.packet_id),
+            digest.clone(),
+        );
+
+        packet_entries.push(entry);
+        packet_digests.insert(packet.packet_id.clone(), digest);
     }
 
-    let candidate = Path::new(path);
-    if candidate.is_absolute() {
-        return false;
+    // Sort packet entries by packet_id for determinism
+    packet_entries.sort_by(|a, b| a.packet_id.as_str().cmp(b.packet_id.as_str()));
+
+    // Process artifacts
+    for artifact in artifacts {
+        let digest = Digest::new(compute_sha256(&artifact.data))?;
+
+        let relative_path = format!(
+            "packets/{}/artifacts/{}",
+            artifact.packet_id, artifact.relative_path
+        );
+        let entry = ArtifactInventoryEntry::new(
+            artifact.packet_id.clone(),
+            relative_path.clone(),
+            artifact.role,
+            digest.clone(),
+        );
+
+        artifact_entries.push(entry);
+        artifact_digests.insert(relative_path, digest);
     }
 
-    !candidate.components().any(|component| {
-        matches!(
-            component,
-            Component::ParentDir | Component::RootDir | Component::Prefix(_)
-        )
-    })
+    // Sort artifact entries by packet_id, then relative_path
+    artifact_entries.sort_by(|a, b| {
+        a.packet_id
+            .as_str()
+            .cmp(b.packet_id.as_str())
+            .then_with(|| a.relative_path.cmp(&b.relative_path))
+    });
+
+    // Compute manifest digest
+    let manifest_data = serde_json::to_vec(&(&packet_entries, &artifact_entries))?;
+    let manifest_digest = Digest::new(compute_sha256(&manifest_data))?;
+
+    let integrity = IntegrityMetadata::new(manifest_digest, packet_digests, artifact_digests);
+
+    Ok(BundleManifest::new(
+        packet_entries,
+        artifact_entries,
+        integrity,
+    ))
 }
 
-pub fn is_sha256_hex(candidate: &str) -> bool {
-    candidate.len() == 64 && candidate.bytes().all(|byte| byte.is_ascii_hexdigit())
+/// Builds a bundle summary from packets.
+pub fn build_bundle_summary(packets: &[Packet]) -> BundleSummary {
+    let mut status_counts = StatusCounts::new();
+    let mut severity_counts = SeverityCounts::new();
+    let mut total_artifacts = 0u32;
+
+    for packet in packets {
+        // Count status
+        status_counts.increment(packet.summary.status);
+
+        // Count findings by severity
+        for finding in &packet.projections.findings {
+            severity_counts.increment(finding.severity);
+        }
+
+        // Count artifacts
+        total_artifacts += packet.artifacts.len() as u32;
+        total_artifacts += packet.projections.attachments.len() as u32;
+    }
+
+    BundleSummary::new(
+        packets.len() as u32,
+        total_artifacts,
+        status_counts,
+        severity_counts,
+    )
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
-    use evidencebus_codes::{ValidationCode, ValidationMode};
-    use evidencebus_fixtures::{faultline_packet, perfgate_packet};
+    use super::*;
+    use evidencebus_codes::FindingSeverity;
+    use evidencebus_types::{AttachmentRole, Finding, Producer, Subject, Summary};
 
-    use super::{stable_bundle_id, summarize_packets, validate_packet};
+    fn create_test_packet(id: &str) -> Packet {
+        Packet::new(
+            evidencebus_types::SchemaVersion::new("0.1.0"),
+            PacketId::new(id).unwrap(),
+            Producer::new("test-tool", "1.0.0"),
+            Subject::new(
+                evidencebus_types::VcsKind::Git,
+                "owner/repo",
+                "abc123",
+                "main",
+            ),
+            Summary::new(
+                evidencebus_codes::PacketStatus::Pass,
+                "Test",
+                "Test summary",
+            ),
+        )
+    }
 
     #[test]
-    fn duplicate_attachment_paths_fail_validation() {
-        let mut packet = perfgate_packet();
-        packet
-            .projections
-            .attachments
-            .push(packet.projections.attachments[0].clone());
+    fn test_dedupe_packets() {
+        // Create packets with same ID and content (same timestamp)
+        let timestamp = "2024-01-01T00:00:00Z";
+        let mut packet1 = create_test_packet("test-packet");
+        packet1.created_at = timestamp.to_string();
 
-        let report = validate_packet(&packet, ValidationMode::Strict);
+        let mut packet2 = create_test_packet("test-packet"); // Duplicate
+        packet2.created_at = timestamp.to_string();
 
-        assert!(
-            report
-                .issues
-                .iter()
-                .any(|issue| issue.code == ValidationCode::DuplicateAttachmentPath)
+        let packet3 = create_test_packet("other-packet");
+
+        let result = dedupe_packets(vec![packet1, packet2, packet3]).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].packet_id.as_str(), "test-packet");
+        assert_eq!(result[1].packet_id.as_str(), "other-packet");
+    }
+
+    #[test]
+    fn test_detect_conflicts() {
+        let packet1 = create_test_packet("test-packet");
+        let mut packet2 = create_test_packet("test-packet");
+        packet2.summary = Summary::new(
+            evidencebus_codes::PacketStatus::Fail,
+            "Different",
+            "Different summary",
         );
+
+        let conflicts = detect_conflicts(&[packet1, packet2]);
+        assert_eq!(conflicts.len(), 1);
+        assert_eq!(conflicts[0].packet_id.as_str(), "test-packet");
     }
 
     #[test]
-    fn native_payload_requires_schema_id() {
-        let mut packet = faultline_packet();
-        if let Some(first) = packet.projections.attachments.first_mut() {
-            first.schema_id = None;
-        }
+    fn test_build_bundle_summary() {
+        let mut packet1 = create_test_packet("packet-1");
+        packet1.projections.findings.push(Finding::new(
+            "f1",
+            FindingSeverity::Error,
+            "Error",
+            "Error message",
+        ));
 
-        let report = validate_packet(&packet, ValidationMode::Strict);
-
-        assert!(
-            report
-                .issues
-                .iter()
-                .any(|issue| issue.code == ValidationCode::MissingNativePayloadSchema)
+        let mut packet2 = create_test_packet("packet-2");
+        packet2.summary = Summary::new(
+            evidencebus_codes::PacketStatus::Fail,
+            "Fail",
+            "Fail summary",
         );
+        packet2.projections.findings.push(Finding::new(
+            "f2",
+            FindingSeverity::Warning,
+            "Warning",
+            "Warning message",
+        ));
+
+        let summary = build_bundle_summary(&[packet1, packet2]);
+        assert_eq!(summary.total_packets, 2);
+        assert_eq!(summary.status_counts.pass, 1);
+        assert_eq!(summary.status_counts.fail, 1);
+        assert_eq!(summary.severity_counts.error, 1);
+        assert_eq!(summary.severity_counts.warning, 1);
     }
 
     #[test]
-    fn summary_counts_follow_packet_status() {
-        let packets = vec![perfgate_packet(), faultline_packet()];
-        let summary = summarize_packets(&packets);
+    fn test_build_bundle_manifest() {
+        let packet1 = create_test_packet("packet-1");
+        let packet2 = create_test_packet("packet-2");
 
-        assert_eq!(summary.packet_count, 2);
-        assert_eq!(summary.pass_count, 1);
-        assert_eq!(summary.indeterminate_count, 1);
-    }
+        let artifact1 = Artifact::new(
+            PacketId::new("packet-1").unwrap(),
+            "report.json",
+            AttachmentRole::ReportHtml,
+            b"artifact data".to_vec(),
+        );
 
-    #[test]
-    fn stable_bundle_id_changes_when_digest_changes() {
-        let left = stable_bundle_id(&[
-            ("a".to_string(), "0".repeat(64)),
-            ("b".to_string(), "1".repeat(64)),
-        ]);
-        let right = stable_bundle_id(&[
-            ("a".to_string(), "0".repeat(64)),
-            ("b".to_string(), "2".repeat(64)),
-        ]);
+        let manifest = build_bundle_manifest(&[packet1, packet2], &[artifact1]).unwrap();
 
-        assert_ne!(left, right);
+        assert_eq!(manifest.packets.len(), 2);
+        assert_eq!(manifest.artifacts.len(), 1);
+        assert_eq!(manifest.packets[0].packet_id.as_str(), "packet-1");
+        assert_eq!(manifest.packets[1].packet_id.as_str(), "packet-2");
     }
 }

@@ -1,12 +1,18 @@
 [workspace]
 members = [
   "crates/evidencebus-codes",
+  "crates/evidencebus-digest",
   "crates/evidencebus-types",
   "crates/evidencebus-core",
   "crates/evidencebus-fs",
   "crates/evidencebus-export",
   "crates/evidencebus-fixtures",
   "crates/evidencebus-cli",
+  "crates/evidencebus-canonicalization",
+  "crates/evidencebus-path",
+  "crates/evidencebus-validation",
+  "crates/evidencebus-export-markdown",
+  "crates/evidencebus-export-sarif",
 ]
 resolver = "2"
 
@@ -18,12 +24,15 @@ license = "MIT"
 repository = "https://github.com/EffortlessMetrics/evidencebus"
 
 [workspace.dependencies]
+chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
 hex = "0.4"
+miette = "7.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"
 tempfile = "3.10"
+termcolor = "1.4"
 thiserror = "1.0"
 walkdir = "2.5"
 
