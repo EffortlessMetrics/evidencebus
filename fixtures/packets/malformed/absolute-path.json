@@ -1,0 +1,29 @@
+{
+  "eb_version": "0.1.0",
+  "packet_id": "test-packet",
+  "producer": {
+    "tool_name": "test-tool",
+    "tool_version": "1.0.0"
+  },
+  "subject": {
+    "vcs_kind": "git",
+    "repo_identifier": "test/repo",
+    "commit": "abc123",
+    "head": "abc123"
+  },
+  "summary": {
+    "status": "pass",
+    "title": "Test",
+    "short_summary": "Test summary"
+  },
+  "projections": {
+    "attachments": [
+      {
+        "role": "arbitrary_binary",
+        "media_type": "application/json",
+        "relative_path": "/etc/passwd",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    ]
+  }
+}

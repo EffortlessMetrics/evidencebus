@@ -1,0 +1,20 @@
+{
+  "eb_version": "0.1.0",
+  "packet_id": "test-packet",
+  "producer": {
+    "tool_name": "test-tool",
+    "tool_version": "1.0.0"
+  },
+  "subject": {
+    "vcs_kind": "git",
+    "repo_identifier": "test/repo",
+    "commit": "abc123",
+    "head": "abc123"
+  },
+  "summary": {
+    "status": "invalid_status",
+    "title": "Test",
+    "short_summary": "Test summary"
+  },
+  "projections": {}
+}

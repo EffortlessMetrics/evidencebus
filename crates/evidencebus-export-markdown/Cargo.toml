@@ -1,0 +1,18 @@
+[package]
+name = "evidencebus-export-markdown"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+evidencebus-codes = { path = "../evidencebus-codes" }
+evidencebus-types = { path = "../evidencebus-types" }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+evidencebus-fixtures = { path = "../evidencebus-fixtures" }
+
+[lints]
+workspace = true

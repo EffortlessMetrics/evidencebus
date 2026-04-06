@@ -1,0 +1,22 @@
+[package]
+name = "evidencebus-validation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+evidencebus-codes = { path = "../evidencebus-codes" }
+evidencebus-types = { path = "../evidencebus-types" }
+evidencebus-digest = { path = "../evidencebus-digest" }
+evidencebus-canonicalization = { path = "../evidencebus-canonicalization" }
+evidencebus-path = { path = "../evidencebus-path" }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+evidencebus-fixtures = { path = "../evidencebus-fixtures" }
+
+[lints]
+workspace = true
