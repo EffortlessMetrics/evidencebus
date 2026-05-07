@@ -2,6 +2,12 @@
 
 **Schema-first evidence backplane for repo operations.**
 
+[![CI](https://github.com/EffortlessMetrics/evidencebus/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/EffortlessMetrics/evidencebus/actions/workflows/ci.yml)
+[![Coverage](https://github.com/EffortlessMetrics/evidencebus/actions/workflows/coverage.yml/badge.svg?branch=main)](https://github.com/EffortlessMetrics/evidencebus/actions/workflows/coverage.yml)
+[![Codecov](https://codecov.io/gh/EffortlessMetrics/evidencebus/branch/main/graph/badge.svg)](https://codecov.io/gh/EffortlessMetrics/evidencebus)
+[![MSRV](https://img.shields.io/badge/MSRV-1.78-blue.svg)](Cargo.toml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 evidencebus takes outputs from tools like `faultline`, `proofrun`, `repropack`,
 `stackcut`, `perfgate`, and similar repos and turns them into:
 
@@ -35,6 +41,8 @@ evidencebus schema packet
 - **deterministic** — stable ordering, stable digests, stable manifests
 - **local-first** — no daemon, service, or network requirement
 - **neutral** — evidence transport and validation only, never merge policy
+
+Codecov is Rust execution-surface telemetry only; see [Coverage](docs/ci/coverage.md) for what the badge does and does not claim.
 
 ## Crate Architecture
 
