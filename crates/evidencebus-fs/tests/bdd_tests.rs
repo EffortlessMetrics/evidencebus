@@ -1350,10 +1350,8 @@ mod bundle_validation {
             let packet = read_packet(packet_path).unwrap();
             let packet_prefix = format!("packets/{}/artifacts/", packet.packet_id);
             for attachment in &packet.projections.attachments {
-                expected_artifact_paths.push(format!(
-                    "{}{}",
-                    packet_prefix, attachment.relative_path
-                ));
+                expected_artifact_paths
+                    .push(format!("{}{}", packet_prefix, attachment.relative_path));
             }
         }
         assert_eq!(manifest.artifacts.len(), expected_artifact_paths.len());
