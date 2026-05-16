@@ -1050,3 +1050,188 @@ fn bdd_given_artifact_path_absolute_when_validating_then_returns_error() {
     // Then
     assert!(result.is_err());
 }
+
+#[test]
+fn bdd_given_bundle_with_duplicate_artifact_path_when_validating_then_returns_error() {
+    // Given
+    let packet1 = create_valid_packet("packet-1");
+    let packet2 = create_valid_packet("packet-2");
+
+    let json1 = canonicalize_json(&packet1).unwrap();
+    let json2 = canonicalize_json(&packet2).unwrap();
+    let data1 = json1.as_bytes().to_vec();
+    let data2 = json2.as_bytes().to_vec();
+
+    let packet_id1 = PacketId::new("packet-1").unwrap();
+    let packet_id2 = PacketId::new("packet-2").unwrap();
+
+    let digest1 = Digest::new(evidencebus_digest::compute_sha256(&data1)).unwrap();
+    let digest2 = Digest::new(evidencebus_digest::compute_sha256(&data2)).unwrap();
+
+    let packet_entries = vec![
+        PacketInventoryEntry::new(
+            packet_id1.clone(),
+            "packets/packet-1/packet.eb.json".to_string(),
+            digest1.clone(),
+        ),
+        PacketInventoryEntry::new(
+            packet_id2.clone(),
+            "packets/packet-2/packet.eb.json".to_string(),
+            digest2.clone(),
+        ),
+    ];
+
+    let artifact1_data = b"artifact data".to_vec();
+    let artifact1_digest =
+        Digest::new(evidencebus_digest::compute_sha256(&artifact1_data)).unwrap();
+    let artifact1_path = "packets/shared/artifacts/report.html".to_string();
+
+    // Two distinct entries that share the same `relative_path` -> triggers the
+    // duplicate-artifact-path branch in `validate_manifest`.
+    let artifact_entries = vec![
+        evidencebus_types::ArtifactInventoryEntry::new(
+            packet_id1.clone(),
+            artifact1_path.clone(),
+            AttachmentRole::ReportHtml,
+            artifact1_digest.clone(),
+        ),
+        evidencebus_types::ArtifactInventoryEntry::new(
+            packet_id2.clone(),
+            artifact1_path.clone(),
+            AttachmentRole::ReportHtml,
+            artifact1_digest.clone(),
+        ),
+    ];
+
+    let mut packet_digests = std::collections::HashMap::new();
+    packet_digests.insert(packet_id1.clone(), digest1);
+    packet_digests.insert(packet_id2.clone(), digest2);
+
+    let mut artifact_digests = std::collections::HashMap::new();
+    artifact_digests.insert(artifact1_path.clone(), artifact1_digest);
+
+    let manifest_data =
+        serde_json::to_vec(&(packet_entries.clone(), artifact_entries.clone())).unwrap();
+    let manifest_digest = Digest::new(evidencebus_digest::compute_sha256(&manifest_data)).unwrap();
+
+    let integrity = IntegrityMetadata::new(manifest_digest, packet_digests, artifact_digests);
+    let manifest = BundleManifest::new(packet_entries, artifact_entries, integrity);
+
+    let summary = BundleSummary::new(2, 1, Default::default(), Default::default());
+
+    let bundle = Bundle::with_current_timestamp(
+        SchemaVersion::new("0.1.0"),
+        PacketId::new("test-bundle").unwrap(),
+        manifest,
+        summary,
+    );
+
+    let packet_data: Vec<(&PacketId, &[u8])> = vec![
+        (&packet_id1, data1.as_slice()),
+        (&packet_id2, data2.as_slice()),
+    ];
+    let artifact_data: Vec<(&std::path::Path, &[u8])> = vec![(
+        std::path::Path::new(&artifact1_path),
+        artifact1_data.as_slice(),
+    )];
+
+    // When
+    let result = validate_bundle(&bundle, &packet_data, &artifact_data);
+
+    // Then
+    match result {
+        Err(BundleValidationError::ConflictingPacket(msg)) => {
+            assert!(
+                msg.contains("duplicate artifact path"),
+                "expected duplicate-artifact-path message, got `{}`",
+                msg
+            );
+        }
+        other => panic!(
+            "expected ConflictingPacket(duplicate artifact path), got {:?}",
+            other
+        ),
+    }
+}
+
+#[test]
+fn bdd_given_bundle_with_artifact_digest_mismatch_in_integrity_when_validating_then_returns_error()
+{
+    // Given - construct a bundle where the artifact's manifest-entry digest
+    // matches the computed digest (so `validate_artifact_inventory` passes)
+    // but the digest stored in `integrity.artifact_digests` differs. This
+    // forces `validate_digest_consistency` to flag the mismatch.
+    let packet1 = create_valid_packet("packet-1");
+    let json1 = canonicalize_json(&packet1).unwrap();
+    let data1 = json1.as_bytes().to_vec();
+    let packet_id1 = PacketId::new("packet-1").unwrap();
+    let digest1 = Digest::new(evidencebus_digest::compute_sha256(&data1)).unwrap();
+
+    let packet_entries = vec![PacketInventoryEntry::new(
+        packet_id1.clone(),
+        "packets/packet-1/packet.eb.json".to_string(),
+        digest1.clone(),
+    )];
+
+    let artifact1_data = b"artifact data".to_vec();
+    let artifact1_digest =
+        Digest::new(evidencebus_digest::compute_sha256(&artifact1_data)).unwrap();
+    let artifact1_path = "packets/packet-1/artifacts/report.html".to_string();
+
+    let artifact_entries = vec![evidencebus_types::ArtifactInventoryEntry::new(
+        packet_id1.clone(),
+        artifact1_path.clone(),
+        AttachmentRole::ReportHtml,
+        artifact1_digest.clone(),
+    )];
+
+    let mut packet_digests = std::collections::HashMap::new();
+    packet_digests.insert(packet_id1.clone(), digest1);
+
+    // Insert a *deliberately wrong* digest for the artifact in integrity
+    // metadata - `validate_artifact_inventory` only checks the manifest entry
+    // digest, so it will pass; `validate_digest_consistency` then compares
+    // against this wrong value.
+    let mut artifact_digests = std::collections::HashMap::new();
+    artifact_digests.insert(artifact1_path.clone(), Digest::new("b".repeat(64)).unwrap());
+
+    let manifest_data =
+        serde_json::to_vec(&(packet_entries.clone(), artifact_entries.clone())).unwrap();
+    let manifest_digest = Digest::new(evidencebus_digest::compute_sha256(&manifest_data)).unwrap();
+
+    let integrity = IntegrityMetadata::new(manifest_digest, packet_digests, artifact_digests);
+    let manifest = BundleManifest::new(packet_entries, artifact_entries, integrity);
+
+    let summary = BundleSummary::new(1, 1, Default::default(), Default::default());
+
+    let bundle = Bundle::with_current_timestamp(
+        SchemaVersion::new("0.1.0"),
+        PacketId::new("test-bundle").unwrap(),
+        manifest,
+        summary,
+    );
+
+    let packet_data: Vec<(&PacketId, &[u8])> = vec![(&packet_id1, data1.as_slice())];
+    let artifact_data: Vec<(&std::path::Path, &[u8])> = vec![(
+        std::path::Path::new(&artifact1_path),
+        artifact1_data.as_slice(),
+    )];
+
+    // When
+    let result = validate_bundle(&bundle, &packet_data, &artifact_data);
+
+    // Then
+    match result {
+        Err(BundleValidationError::DigestMismatch(msg)) => {
+            assert!(
+                msg.contains("integrity metadata"),
+                "expected integrity-metadata mismatch message, got `{}`",
+                msg
+            );
+        }
+        other => panic!(
+            "expected DigestMismatch from integrity metadata, got {:?}",
+            other
+        ),
+    }
+}
