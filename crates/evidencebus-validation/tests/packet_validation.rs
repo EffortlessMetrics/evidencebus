@@ -434,3 +434,204 @@ fn bdd_given_attachment_with_backslash_when_validating_then_returns_error() {
     // Then
     assert!(matches!(result, Err(ValidationError::UnsafePath(_))));
 }
+
+/// Round-trips a packet through JSON, allowing tests to override fields whose
+/// constructors normally reject invalid values (e.g. `PacketId::new` forbids
+/// empty IDs). The validation crate's job is to *re-check* such fields, so this
+/// lets us exercise those branches.
+fn rebuild_packet_with_json_override(
+    packet: &evidencebus_types::Packet,
+    mutate: impl FnOnce(&mut serde_json::Value),
+) -> evidencebus_types::Packet {
+    let mut value = serde_json::to_value(packet).unwrap();
+    mutate(&mut value);
+    serde_json::from_value(value).unwrap()
+}
+
+#[test]
+fn bdd_given_packet_with_empty_packet_id_when_validating_then_returns_error() {
+    // Given - bypass `PacketId::new` by editing the JSON form directly.
+    let packet = create_valid_packet();
+    let packet = rebuild_packet_with_json_override(&packet, |v| {
+        v["packet_id"] = serde_json::Value::String(String::new());
+    });
+
+    // When
+    let result = validate_packet(&packet);
+
+    // Then
+    match result {
+        Err(ValidationError::MissingRequiredField(field)) => {
+            assert_eq!(field, "packet_id");
+        }
+        other => panic!("expected MissingRequiredField(packet_id), got {:?}", other),
+    }
+}
+
+#[test]
+fn bdd_given_packet_with_empty_producer_tool_name_when_validating_then_returns_error() {
+    // Given
+    let mut packet = create_valid_packet();
+    packet.producer.tool_name = String::new();
+
+    // When
+    let result = validate_packet(&packet);
+
+    // Then
+    match result {
+        Err(ValidationError::MissingRequiredField(field)) => {
+            assert_eq!(field, "producer.tool_name");
+        }
+        other => panic!(
+            "expected MissingRequiredField(producer.tool_name), got {:?}",
+            other
+        ),
+    }
+}
+
+#[test]
+fn bdd_given_packet_with_empty_producer_tool_version_when_validating_then_returns_error() {
+    // Given
+    let mut packet = create_valid_packet();
+    packet.producer.tool_version = String::new();
+
+    // When
+    let result = validate_packet(&packet);
+
+    // Then
+    match result {
+        Err(ValidationError::MissingRequiredField(field)) => {
+            assert_eq!(field, "producer.tool_version");
+        }
+        other => panic!(
+            "expected MissingRequiredField(producer.tool_version), got {:?}",
+            other
+        ),
+    }
+}
+
+#[test]
+fn bdd_given_packet_with_empty_subject_repo_identifier_when_validating_then_returns_error() {
+    // Given
+    let mut packet = create_valid_packet();
+    packet.subject.repo_identifier = String::new();
+
+    // When
+    let result = validate_packet(&packet);
+
+    // Then
+    match result {
+        Err(ValidationError::MissingRequiredField(field)) => {
+            assert_eq!(field, "subject.repo_identifier");
+        }
+        other => panic!(
+            "expected MissingRequiredField(subject.repo_identifier), got {:?}",
+            other
+        ),
+    }
+}
+
+#[test]
+fn bdd_given_packet_with_empty_subject_commit_when_validating_then_returns_error() {
+    // Given
+    let mut packet = create_valid_packet();
+    packet.subject.commit = String::new();
+
+    // When
+    let result = validate_packet(&packet);
+
+    // Then
+    match result {
+        Err(ValidationError::MissingRequiredField(field)) => {
+            assert_eq!(field, "subject.commit");
+        }
+        other => panic!(
+            "expected MissingRequiredField(subject.commit), got {:?}",
+            other
+        ),
+    }
+}
+
+#[test]
+fn bdd_given_packet_with_empty_subject_head_when_validating_then_returns_error() {
+    // Given
+    let mut packet = create_valid_packet();
+    packet.subject.head = String::new();
+
+    // When
+    let result = validate_packet(&packet);
+
+    // Then
+    match result {
+        Err(ValidationError::MissingRequiredField(field)) => {
+            assert_eq!(field, "subject.head");
+        }
+        other => panic!(
+            "expected MissingRequiredField(subject.head), got {:?}",
+            other
+        ),
+    }
+}
+
+#[test]
+fn bdd_given_packet_with_attachment_short_digest_via_serde_when_validating_then_returns_error() {
+    // Given - bypass `Digest::new` length check by writing an invalid digest
+    // directly into the JSON form, then deserializing back.
+    let mut packet = create_valid_packet();
+    let valid_digest = "a".repeat(64);
+    packet.projections.attachments.push(Attachment::new(
+        AttachmentRole::ReportHtml,
+        "text/plain".to_string(),
+        "test.txt".to_string(),
+        Digest::new(valid_digest).unwrap(),
+    ));
+    let packet = rebuild_packet_with_json_override(&packet, |v| {
+        v["projections"]["attachments"][0]["sha256"] = serde_json::Value::String("abc".to_string());
+    });
+
+    // When
+    let result = validate_packet(&packet);
+
+    // Then - the attachments-loop length check fires.
+    match result {
+        Err(ValidationError::ReferenceInvalid(msg)) => {
+            assert!(
+                msg.contains("invalid length"),
+                "expected length-related ReferenceInvalid, got `{}`",
+                msg
+            );
+        }
+        other => panic!("expected ReferenceInvalid, got {:?}", other),
+    }
+}
+
+#[test]
+fn bdd_given_packet_with_attachment_non_hex_digest_via_serde_when_validating_then_returns_error() {
+    // Given - 64 chars but non-hex.
+    let mut packet = create_valid_packet();
+    let valid_digest = "a".repeat(64);
+    packet.projections.attachments.push(Attachment::new(
+        AttachmentRole::ReportHtml,
+        "text/plain".to_string(),
+        "test.txt".to_string(),
+        Digest::new(valid_digest).unwrap(),
+    ));
+    let packet = rebuild_packet_with_json_override(&packet, |v| {
+        v["projections"]["attachments"][0]["sha256"] = serde_json::Value::String("z".repeat(64));
+    });
+
+    // When
+    let result = validate_packet(&packet);
+
+    // Then - the attachments-loop hex check fires.
+    match result {
+        Err(ValidationError::ReferenceInvalid(msg)) => {
+            assert!(
+                msg.contains("invalid hex"),
+                "expected hex-related ReferenceInvalid, got `{}`",
+                msg
+            );
+        }
+        other => panic!("expected ReferenceInvalid, got {:?}", other),
+    }
+}
