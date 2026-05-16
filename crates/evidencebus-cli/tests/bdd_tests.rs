@@ -8,7 +8,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
-const CLI_BIN: &str = "evidencebus";
+const CLI_BIN: &str = env!("CARGO_BIN_EXE_evidencebus");
 
 /// Helper function to get fixture path
 fn fixture_path(path: &str) -> PathBuf {
